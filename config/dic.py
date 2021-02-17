@@ -1,8 +1,8 @@
 #-*-coding:utf-8-*-
 import re
 import requests
-from LastOrderBot.plugin.msgutil import MsgUtil
-from LastOrderBot.config.config import Config
+from plugin.msgutil import MsgUtil
+from config.config import Config
 
 headers = Config.headers
 csrf_token = Config.csrf_token

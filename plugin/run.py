@@ -4,8 +4,8 @@ import requests
 #json模块导入
 import demjson
 import time
-from bilibiliRobot.config import dic
-from bilibiliRobot.config.config import Config
+from config import dic
+from config.config import Config
 
 #获取全局配置
 headers = Config.headers
