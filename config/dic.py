@@ -3,11 +3,13 @@ import re
 import requests
 from plugin.msgutil import MsgUtil
 from config.config import Config
+from plugin.fileutil import FileUtil
 
 headers = Config.headers
 csrf_token = Config.csrf_token
 robotUid = Config.robot_uid
 msgutil = MsgUtil(headers,csrf_token,robotUid)
+fileutil = FileUtil()
 
 #DIC词库内容
 def sendText(userMsg,robotUid,senderUid):
@@ -33,6 +35,8 @@ def sendText(userMsg,robotUid,senderUid):
         print(msgutil.sendImage(imageUrl,robotUid,senderUid,imageWidth,imageHeight,imageFormat))
         msgutil.updateAck(senderUid,csrf_token)
 
+    
+
     #正则表达式区域
     re1 = re.search('^你好 ?(.*?)$', userMsg)
     if re1:
@@ -47,5 +51,21 @@ def sendText(userMsg,robotUid,senderUid):
         pass
 
 
+    re2 = re.search('^写入 .*? .*? .*?$', userMsg)
+    if re2:
+        MsgRe = re.compile('^写入 (.*?) (.*?) (.*?)$')
+        MsgReArray = MsgRe.match(userMsg)
+        fileutil.write(MsgReArray.group(1),MsgReArray.group(2),MsgReArray.group(3))
+        print(msgutil.sendMsg("写入成功",robotUid,senderUid))
+        msgutil.updateAck(senderUid,csrf_token)
+
+
+    re3 = re.search('^读出 .*? .*?$', userMsg)
+    if re3:
+        MsgRe = re.compile('^读出 (.*?) (.*?)$')
+        MsgReArray = MsgRe.match(userMsg)
+        Msg = fileutil.read(MsgReArray.group(1),MsgReArray.group(2))
+        print(msgutil.sendMsg(Msg,robotUid,senderUid))
+        msgutil.updateAck(senderUid,csrf_token)
     pass
 
