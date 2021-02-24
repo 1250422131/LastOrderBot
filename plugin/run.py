@@ -37,17 +37,35 @@ def run():
             #拉取新消息条数
             while i < len(newMsg['data']['session_list']):
                 newMsgJson = newMsg['data']['session_list'][i]
+                #机器人ID
                 receiverId = newMsgJson["last_msg"]["receiver_id"]
+                #用户ID
                 senderUid = newMsgJson["last_msg"]['sender_uid']
+                #撤回消息与否 1是发送 0是撤回
+                unread_count = newMsgJson["unread_count"]
+                ack_seqno = int(newMsgJson["ack_seqno"]) + 1
                 if robotUid == int(receiverId):
-                    if "url" in str(newMsgJson["last_msg"]["content"]):
-                        imageJson = demjson.decode(newMsgJson["last_msg"]["content"])
-                        imageUrl = imageJson['url']
-                        imageType = imageJson['imageType']
-                    else:
-                        MsgJson = demjson.decode(newMsgJson["last_msg"]["content"])
-                        Msg = MsgJson['content']
-                        dic.sendText(Msg,receiverId,senderUid)
+                    dic.updateAck(senderUid,ack_seqno,csrf_token)
+                    #消息类型 1是文本 2是图片
+                    msg_type = newMsgJson["last_msg"]["msg_type"]
+                    #消判信息
+                    if unread_count == 1 :
+                        if msg_type == 1:
+                            MsgJson = demjson.decode(newMsgJson["last_msg"]["content"])
+                            Msg = MsgJson['content']
+                            dic.sendText(Msg,receiverId,senderUid)
+                        elif msg_type == 2 :
+                            imageJson = demjson.decode(newMsgJson["last_msg"]["content"])
+                            dic.sendImage(imageJson,receiverId,senderUid)
+                    elif unread_count == 0:
+                        if msg_type == 1:
+                            MsgJson = demjson.decode(newMsgJson["last_msg"]["content"])
+                            Msg = MsgJson['content']
+                            dic.withdrawText(Msg,receiverId,senderUid)
+                        elif msg_type == 2 :
+                            print(newMsgJson["last_msg"]["content"])
+                            imageJson = demjson.decode(newMsgJson["last_msg"]["content"])
+                            dic.withdrawImage(imageJson,receiverId,senderUid)
                 i = i + 1
         else:
             pass
