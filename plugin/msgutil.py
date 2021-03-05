@@ -1,3 +1,5 @@
+from re import M
+import re
 import time
 import requests
 import demjson
@@ -51,7 +53,7 @@ class MsgUtil:
         return fa.text
 
     '''
-    阅读信息
+    阅读信息 -> 目前一口气给B站上传，代表你已读信息 我并不清楚是否多余请求，请其他开发者指正
     @Mid 读取私信用户UID
     @csrf_token 鉴权值
     @return 返回信息
@@ -59,6 +61,10 @@ class MsgUtil:
     def updateAck(self,Mid,csrf_token):
         post_data = {'talker_id':Mid,'session_type':1,'ack_seqno':195,'build':0,'mobi_app':"web","csrf_token":self.csrf_token,"csrf":self.csrf_token}
         fa =  requests.post('https://api.vc.bilibili.com/session_svr/v1/session_svr/update_ack',post_data,headers=self.headers)
+        requests.get("https://api.vc.bilibili.com/link_setting/v1/link_setting/is_limit?uid="+str(Mid)+"&type=1",headers=self.headers)
+        requests.get("https://api.vc.bilibili.com/link_setting/v1/link_setting/get_session_ss?talker_uid=351201307&build=0&mobi_app=web",headers=self.headers)
+        requests.get("https://message.bilibili.com/api/msg/query.room.list.do?page_no=1&mid="+str(Mid),headers=self.headers)
+        requests.get("https://api.vc.bilibili.com/svr_sync/v1/svr_sync/fetch_session_msgs?sender_device_id=1&talker_id="+str(Mid)+"&session_type=1&size=20&begin_seqno=514&build=0&mobi_app=web",headers=self.headers)
         fa.encoding = 'utf-8'
         return fa.text
 
@@ -69,6 +75,7 @@ class MsgUtil:
     '''
     def captureIamgeUrl(self,url):
         #post的参数
+        print(url)
         post_data = {'url':url,"csrf":self.csrf_token}
         fa =  requests.post('https://api.bilibili.com/x/article/creative/article/capture',post_data,headers=self.headers)
         fa.encoding = 'utf-8'
@@ -95,5 +102,5 @@ class MsgUtil:
         #在这里返回 一个数组 长 宽 高 格式
         ImageFormat = [im.width,im.height,im.format]
         return ImageFormat
-        pass
+        
     pass
