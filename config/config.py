@@ -32,7 +32,7 @@ class Config:
 
     # webhook挂钩地址 可设为多个，不要太多 即使我已经使用了线程操作
     webHookUrl = [
-        ''
+        '请求地址'
     ]
 
     '''
@@ -40,6 +40,7 @@ class Config:
     这里是我专门留出的，外部可以直接向这个地址去发送请求，收到后直接推送给机器人
     '''
     # Socke通信状态 False则不启动服务端
-    SocketState = True
+    SocketState = False
+
 
 

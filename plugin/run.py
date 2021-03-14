@@ -21,14 +21,16 @@ heartbeatInterval = Config.heartbeat_interval
 webHookState = Config.webHookState
 webHookDicState = Config.webHookDicState
 webHookUrl = Config.webHookUrl
+SocketState = Config.SocketState
 msgutil = MsgUtil(headers,csrf_token,robotUid)
 
 
 def run():
     # 启动一个线程，后台介绍信息，使得后续机器人可正常检测内容
-    webHookThread = threading.Thread(target=robotSocket)
-    # start启动线程
-    webHookThread.start()
+    if SocketState:
+        webHookThread = threading.Thread(target=robotSocket)
+        # start启动线程
+        webHookThread.start()
     #给操作类必要参数，后面你可以自己补充
     while (True):
         time.sleep(heartbeatInterval)
@@ -58,11 +60,11 @@ def run():
                 unread_count = newMsgJson["unread_count"]
                 ack_seqno = int(newMsgJson["ack_seqno"]) + 1
                 if robotUid == int(receiverId):
-                    webHookThread = threading.Thread(target=webHook,args=(newMsgGet.text,1))
-                    # start启动线程
-                    webHookThread.start()
                     #消息阅读
                     dic.updateAck(senderUid,ack_seqno,csrf_token)
+                    webHookThread = threading.Thread(target=webHook,args=(newMsg,1))
+                    # start启动线程
+                    webHookThread.start()
                     #dic 词库激活状态
                     if pythonDicState:
                         #消息类型 1是文本 2是图片
@@ -96,17 +98,32 @@ def run():
 下面我展示一下php的获取方式
 其他网页语言百度一下
 <?php
-//接受传回来的JSON，并且进行解码
-$update = json_decode(file_get_contents('php://input'), true);
-//这里只是把获取到的内容储存下来，你用的话删掉，写你的词库逻辑代码，如果不需要，则可以忽略。
-file_put_contents("./nex.txt",$update);
+$userMsg = json_decode(file_get_contents('php://input'), true);
+file_put_contents('new.txt', $userMsg);
+//用户信息
+$Msg = $userMsg["data"]["session_list"][0]["last_msg"]["content"];
+$Msg = json_decode($Msg, true);
+$Msg = $Msg['content'];
+//用户UID -> 受信UID
+$senderUid = $userMsg['data']['session_list'][0]["last_msg"]['receiver_id'];
+//机器人UID-> 发信UID
+$receiverid = $userMsg['data']['session_list'][0]["last_msg"]['sender_uid'];
+//消息类型 1是文本 2是图片
+$msg_type = $userMsg['data']['session_list'][0]["last_msg"]["msg_type"]
+$array = [
+    'msg_type' => 1,
+    'receiverid' =>$receiverid,
+    'senderuid' => $senderUid,
+    'msg' => $Msg
+];
+echo json_encode($array, JSON_UNESCAPED_UNICODE);
+
 '''
 def webHook(newJson,key):
     if webHookState:
         headers = {
-        'Content-Type': 'application/json;charset=UTF-8',
-        "charset": "utf-8",
-        'User-Agent' : 'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; WOW64; Trident/4.0; SLCC2; .NET CLR 2.0.50727; .NET CLR 3.5.30729; .NET CLR 3.0.30729; Media Center PC 6.0; .NET4.0C; InfoPath.3)',
+        'Connection': 'close',
+        'Content-Type': 'application/json;charset=UTF-8'
         }
         i = 0
         while i < len(webHookUrl):
@@ -114,6 +131,7 @@ def webHook(newJson,key):
             # 挂钩词库事件
             if webHookDicState:
                 MsgJson = demjson.decode(webHookMsgStr.text)
+                print(MsgJson)
                 msg = MsgJson["msg"]
                 # TODO 发送类型 1 是文本类型 Msg代表发送文本 2 是图片类型 Msg代表图片链接，，，，这必须是
                 msg_type = MsgJson["msg_type"]
