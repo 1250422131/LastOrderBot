@@ -3,7 +3,6 @@
 import requests
 #json模块导入
 import demjson
-import json
 import time
 import threading
 from plugin.msgutil import MsgUtil
@@ -39,7 +38,7 @@ def run():
         #精确改变
         thisTime = round(thisTime * 1000000)
         #心跳导致的延误时间计算
-        pastTime = round(heartbeatInterval * 2000000)
+        pastTime = round(heartbeatInterval * 1000000)
         #获取正确时间戳
         thisTime = int(thisTime) - pastTime
         #请求信息接口
