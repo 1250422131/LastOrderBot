@@ -21,6 +21,9 @@ webHookState = Config.webHookState
 webHookDicState = Config.webHookDicState
 webHookUrl = Config.webHookUrl
 SocketState = Config.SocketState
+live_heartbeat_interval = Config.live_heartbeat_interval
+live_id = Config.live_id
+liveDicState = Config.liveDicState
 msgutil = MsgUtil(headers,csrf_token,robotUid)
 
 
@@ -30,6 +33,11 @@ def run():
         webHookThread = threading.Thread(target=robotSocket)
         # start启动线程
         webHookThread.start()
+    #同上
+    if liveDicState:
+        liveThread = threading.Thread(target=liveBroadcastRun)
+        liveThread.start()
+
     #给操作类必要参数，后面你可以自己补充
     while (True):
         time.sleep(heartbeatInterval)
@@ -151,8 +159,8 @@ def webHook(newJson,key):
                 pass
             i = i + 1
 
-    #Socket 主要是用来作为外部通信的 假如你不会python语言，用其他的，就可以使用UDP通信
 
+#Socket 主要是用来作为外部通信的 假如你不会python语言，用其他的，就可以使用UDP通信
 def robotSocket():
     print("==============RobotUDP服务端已经启动===================")
     host = '127.0.0.1' #主机号为空白表示可以使用任何可用的地址
@@ -185,5 +193,52 @@ def robotSocket():
         udpSerSock.sendto(bytes(data.decode('utf-8'), 'utf-8'), addr)#向客户端发送时间戳数据，必须发送字节数组
         print('响应消息到', addr)
     udpSerSock.close()#关闭服务器
+
+
+#直播函数
+def liveBroadcastRun():
+    #创建一个储存发信时间的数组 -> 以免机器人重复测信
+    msg_dictionary = []
+    #创建数组计数值 当达到设定值后清理多余数据以免造成数组过长，运行迟钝
+    max_count = 1000
+    while True:
+        #暂停一段时间
+        time.sleep(live_heartbeat_interval)
+        #请求接口开始轮询
+        newMsgGet =  requests.get("https://api.live.bilibili.com/xlive/web-room/v1/dM/gethistory?roomid="+str(live_id),headers=headers)
+        newMsgGet.encoding = 'utf-8'
+        newMsg = demjson.decode(newMsgGet.text)
+        #获取普通用户弹幕
+        roomArrayJson = newMsg['data']['room']
+        i = 0
+        #轮询检测是否有重复
+        while i < len(roomArrayJson):
+            msgData = roomArrayJson[i]
+            msgTime = msgData['check_info']['ct']
+            Msg = msgData['text']
+            uid = msgData['uid']
+            #判断是否为机器人自己发送的内容
+            if int(uid) != robotUid:
+                #判断直播间是否有原来的信息 直播间数目 对比 记录时间条数 以此过滤原有内容
+                if len(roomArrayJson) < len(msg_dictionary):
+                    #判断这条信息是否已经被读取回复了 B站最多支持10条，也就是最多会重复刷新10次 每次3秒多一点
+                    if msgTime in msg_dictionary:
+                        #信息已经存在 不做操作 这里留个位置，我担心以后有用
+                        pass
+                    else:
+                        #信息不存在则添加鸡记录信息
+                        msg_dictionary.append(msgTime)
+                        #推送消息
+                        dic.liveSendText(Msg,live_id)
+                        #判断数组是否达到峰值，如果达到则清空
+                        if len(msg_dictionary) > max_count:
+                            del msg_dictionary[0:max_count-10]
+                            pass
+                else:
+                    #不存在则否则记录
+                    msg_dictionary.append(msgTime)
+            i = i + 1
+            
+    
 
 
