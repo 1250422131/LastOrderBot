@@ -9,7 +9,7 @@ from plugin.msgutil import MsgUtil
 from config import dic
 from config.config import Config
 from socket import *
-
+import operator
 
 #获取全局配置
 headers = Config.headers
@@ -46,7 +46,9 @@ def run():
         #精确改变
         thisTime = round(thisTime * 1000000)
         #心跳导致的延误时间计算
-        pastTime = round(heartbeatInterval * 1000000)
+        #thisHeartbeatInterval 这里减去0.2是因为我发现直接减去延迟时间会导致检测为撤回消息，这个是因为获取太早了，把上一次信息拿到了
+        thisHeartbeatInterval = heartbeatInterval - 0.2;
+        pastTime = round(thisHeartbeatInterval * 1000000)
         #获取正确时间戳
         thisTime = int(thisTime) - pastTime
         #请求信息接口
@@ -54,7 +56,8 @@ def run():
         newMsgGet.encoding = 'utf-8'
         newMsg = demjson.decode(newMsgGet.text)
         #判断是否有新消息
-        if "session_list" in str(newMsg):
+        print(newMsg)
+        if bool("session_list" in str(newMsg)) & operator.not_("'session_list': None" in str(newMsg)) :
             i = 0
             #拉取新消息条数
             while i < len(newMsg['data']['session_list']):
@@ -65,7 +68,8 @@ def run():
                 senderUid = newMsgJson["last_msg"]['sender_uid']
                 #撤回消息与否 1是发送 0是撤回
                 unread_count = newMsgJson["unread_count"]
-                ack_seqno = int(newMsgJson["ack_seqno"]) + 1
+                print(unread_count)
+                ack_seqno = int(newMsgJson["max_seqno"])
                 if robotUid == int(receiverId):
                     #消息阅读
                     dic.updateAck(senderUid,ack_seqno,csrf_token)

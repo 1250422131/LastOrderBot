@@ -1,9 +1,11 @@
+import json
 from re import M
 import re
 import time
 import requests
 import demjson
 import io
+import urllib3
 from PIL import Image
 
 
@@ -70,10 +72,6 @@ class MsgUtil:
     def updateAck(self,Mid,csrf_token):
         post_data = {'talker_id':Mid,'session_type':1,'ack_seqno':195,'build':0,'mobi_app':"web","csrf_token":self.csrf_token,"csrf":self.csrf_token}
         fa =  requests.post('https://api.vc.bilibili.com/session_svr/v1/session_svr/update_ack',post_data,headers=self.headers)
-        requests.get("https://api.vc.bilibili.com/link_setting/v1/link_setting/is_limit?uid="+str(Mid)+"&type=1",headers=self.headers)
-        requests.get("https://api.vc.bilibili.com/link_setting/v1/link_setting/get_session_ss?talker_uid=351201307&build=0&mobi_app=web",headers=self.headers)
-        requests.get("https://message.bilibili.com/api/msg/query.room.list.do?page_no=1&mid="+str(Mid),headers=self.headers)
-        requests.get("https://api.vc.bilibili.com/svr_sync/v1/svr_sync/fetch_session_msgs?sender_device_id=1&talker_id="+str(Mid)+"&session_type=1&size=20&begin_seqno=514&build=0&mobi_app=web",headers=self.headers)
         fa.encoding = 'utf-8'
         return fa.text
 
@@ -95,6 +93,38 @@ class MsgUtil:
         else:
             imageUrl = "https://i0.hdslb.com/bfs/album/1453def5c58b7c52041e4e076a5a853e358a53e1.jpg"
         return imageUrl
+
+
+    def upcoverImage(self,url):
+
+        image_name = 'binary'
+        data_param= {"csrf":self.csrf_token,'img_name': image_name} #有些API要求指定文件名参数
+        # TODO 获取远程网络图片
+        image_file = io.StringIO(urllib3.urlopen(url).read())
+        image_data = Image.open(image_file)
+        output = io.BytesIO()
+        image_data.save(output, format='PNG') # format=image_data.format
+        print (image_data.format) #输出的不一定是JPEG也可能是PNG
+        image_data.close()
+        data_bin = output.getvalue()
+        output.close()
+        file_obj = data_bin
+        #fixed at 2017-05-19 10:49:57
+        img_file= {image_name: file_obj} #Very Important. 
+        #the key must be the filename, 
+        #because the requests cannot guess the correct filename from the bytes array.
+        data_result = requests.post(url, data_param, files=img_file ,headers=self.headers)
+        if isinstance(file_obj, MsgUtil): #这里load_image获得的是二进制流了，不是file对象。
+            file_obj.close()
+        data_resultJson = demjson.decode(data_result)
+        if data_resultJson['code'] == 0:
+            imageUrl = data_resultJson['data']['url']
+        else:
+            imageUrl = "https://i0.hdslb.com/bfs/album/1453def5c58b7c52041e4e076a5a853e358a53e1.jpg"
+        return imageUrl
+
+ 
+
     
     '''
     图片信息获取
